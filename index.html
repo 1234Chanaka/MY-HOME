@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MY HOME</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: url('https://static.vecteezy.com/system/resources/previews/001/882/531/original/dark-blue-technology-background-free-vector.jpg') no-repeat center center fixed;
+      background-size: cover;
+      color: white;
+    }
+
+    #loginForm, #dashboard {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: rgba(0, 0, 50, 0.85);
+      border-radius: 10px;
+      margin-top: 30px;
+    }
+
+    .relay-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .relay-card {
+      background-color: #001f3f;
+      padding: 8px;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 12px;
+      box-shadow: 0 0 6px #000;
+    }
+
+    .relay-card h2 {
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+
+    .relay-card button {
+      background-color: #007BFF;
+      border: none;
+      color: white;
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 80%;
+    }
+
+    .relay-card button.green {
+      background-color: green;
+    }
+
+    button {
+      margin: 10px 5px;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      color: #ccc;
+    }
+
+    input {
+      padding: 6px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .login-inputs {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="loginForm">
+    <h2>Login</h2>
+    <div class="login-inputs">
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Password">
+      <button id="loginBtn">Login</button>
+    </div>
+  </div>
+
+  <div id="dashboard" style="display: none;">
+    <h2>MY HOME</h2>
+    <div class="relay-grid">
+      <div class="relay-card"><h2>Bathroom</h2><p>Status: <span id="status-bathroom">...</span></p><button id="btn-bathroom">Toggle</button></div>
+      <div class="relay-card"><h2>Bedroom</h2><p>Status: <span id="status-bedroom">...</span></p><button id="btn-bedroom">Toggle</button></div>
+      <div class="relay-card"><h2>Front</h2><p>Status: <span id="status-front">...</span></p><button id="btn-front">Toggle</button></div>
+      <div class="relay-card"><h2>Garage</h2><p>Status: <span id="status-garage">...</span></p><button id="btn-garage">Toggle</button></div>
+      <div class="relay-card"><h2>Kitchen</h2><p>Status: <span id="status-kitchen">...</span></p><button id="btn-kitchen">Toggle</button></div>
+      <div class="relay-card"><h2>Living Room</h2><p>Status: <span id="status-livingroom">...</span></p><button id="btn-livingroom">Toggle</button></div>
+      <div class="relay-card"><h2>Passage</h2><p>Status: <span id="status-passage">...</span></p><button id="btn-passage">Toggle</button></div>
+      <div class="relay-card"><h2>Staircase</h2><p>Status: <span id="status-staircase">...</span></p><button id="btn-staircase">Toggle</button></div>
+    </div>
+
+    <button id="allOffBtn">All OFF</button>
+    <button id="logoutBtn">Logout</button>
+  </div>
+
+  <footer>
+    Created by ABHISHEKA
+  </footer>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
+  <script>
+    // Replace with your Firebase config
+    const firebaseConfig = {
+     apiKey: "AIzaSyChwclbJEi1Q5trKl1iGTRw2c0jpNGPPJ4",
+  authDomain: "home-7d370.firebaseapp.com",
+  databaseURL: "https://home-7d370-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "home-7d370",
+  storageBucket: "home-7d370.firebasestorage.app",
+  messagingSenderId: "730950128373",
+  appId: "1:730950128373:web:be70e41c305535eaea6bbc"
+};
+    firebase.initializeApp(firebaseConfig);
+
+    const allowedEmail = "abijayasinghe@gmail.com";
+    const allowedPassword = "ABI12340";
+
+    const loginForm = document.getElementById("loginForm");
+    const dashboard = document.getElementById("dashboard");
+    const loginBtn = document.getElementById("loginBtn");
+
+    loginBtn?.addEventListener("click", () => {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        alert("Please enter email and password.");
+        return;
+      }
+
+      if(email === allowedEmail && password === allowedPassword){
+        firebase.auth().signInWithEmailAndPassword(email, password)
+          .then(userCredential => {
+            loginForm.style.display = "none";
+            dashboard.style.display = "block";
+            startRelayControl();
+          })
+          .catch(error => {
+            alert("Firebase login failed: " + error.message);
+          });
+      } else {
+        alert("Invalid email or password.");
+      }
+    });
+
+    function startRelayControl() {
+      const db = firebase.database();
+      const relays = [
+        "bathroom", "bedroom", "front", "garage",
+        "kitchen", "livingroom", "passage", "staircase"
+      ];
+
+      relays.forEach(id => {
+        const statusText = document.getElementById(`status-${id}`);
+        const toggleButton = document.getElementById(`btn-${id}`);
+        const relayRef = db.ref("/" + id);
+
+        relayRef.on("value", (snapshot) => {
+          const state = snapshot.val();
+          statusText.innerText = state ? "ON" : "OFF";
+          toggleButton.classList.toggle("green", state);
+        });
+
+        toggleButton.onclick = () => {
+          relayRef.get().then(snap => {
+            relayRef.set(!snap.val());
+          });
+        };
+      });
+
+      document.getElementById("allOffBtn").onclick = () => {
+        relays.forEach(id => {
+          db.ref("/" + id).set(false);
+        });
+      };
+    }
+
+    document.getElementById("logoutBtn").onclick = () => {
+      firebase.auth().signOut()
+        .then(() => {
+          dashboard.style.display = "none";
+          loginForm.style.display = "block";
+          document.getElementById("email").value = "";
+          document.getElementById("password").value = "";
+        })
+        .catch(error => {
+          alert("Logout failed: " + error.message);
+        });
+    };
+  </script>
+</body>
+</html>
